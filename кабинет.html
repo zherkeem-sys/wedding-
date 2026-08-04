@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Жеке кабинет — Аймырза &amp; Аружан</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Marck+Script&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,500;1,600&family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --cream:#FBF6ED; --paper:#F1E7D6; --paper-dark:#E4D5BC;
+    --ink:#251A11; --ink-soft:#3A2A1B; --umber:#6E4429; --umber-soft:#9C7B57;
+    --gold:#B8935B; --gold-light:#D9C4A0; --white:#FFFFFF;
+    --danger:#B44B3E; --danger-dark:#8f3a30;
+    --font-script:'Marck Script',cursive; --font-display:'Playfair Display',serif; --font-body:'Montserrat',sans-serif;
+  }
+  *,*::before,*::after{ box-sizing:border-box; }
+  body{ margin:0; background:var(--cream); color:var(--ink); font-family:var(--font-body); -webkit-font-smoothing:antialiased; }
+  .wrap{ max-width:960px; margin:0 auto; padding:48px 20px 80px; }
+  .top{ text-align:center; margin-bottom:44px; }
+  .top .eyebrow{ font-size:12px; letter-spacing:.28em; text-transform:uppercase; color:var(--gold); font-weight:600; }
+  .top h1{ font-family:var(--font-script); font-size:42px; color:var(--umber); margin:10px 0 4px; font-weight:400; }
+  .top p{ font-size:13px; color:var(--umber-soft); letter-spacing:.05em; }
+
+  .stats-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:14px; margin-bottom:32px; }
+  @media(min-width:640px){ .stats-grid{ grid-template-columns:repeat(4,1fr); } }
+  .stat-card{
+    background:var(--white); border:1px solid var(--gold-light); border-radius:14px; padding:22px 14px;
+    text-align:center; box-shadow:0 10px 26px rgba(37,26,17,.06);
+  }
+  .stat-num{ font-family:var(--font-display); font-size:32px; font-weight:700; color:var(--umber); font-variant-numeric:tabular-nums; }
+  .stat-label{ margin-top:6px; font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--umber-soft); }
+
+  .actions{ display:flex; gap:12px; flex-wrap:wrap; justify-content:center; margin-bottom:36px; }
+  .btn{
+    display:inline-flex; align-items:center; gap:8px; padding:13px 24px; border-radius:999px;
+    font-size:12.5px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; border:1px solid var(--gold);
+    cursor:pointer; background:var(--gold); color:var(--ink); transition:transform .2s ease, background .2s ease;
+  }
+  .btn:hover{ transform:translateY(-2px); background:#c8a06a; }
+  .btn-danger{ background:transparent; border-color:var(--danger); color:var(--danger); }
+  .btn-danger:hover{ background:var(--danger); color:#fff; }
+  .btn:disabled{ opacity:.5; cursor:default; transform:none; }
+
+  .panel{
+    background:var(--white); border:1px solid var(--gold-light); border-radius:16px; padding:8px;
+    box-shadow:0 20px 50px rgba(37,26,17,.06); overflow-x:auto;
+  }
+  table{ width:100%; border-collapse:collapse; min-width:640px; }
+  thead th{
+    text-align:left; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--umber-soft);
+    padding:14px 16px; border-bottom:1px solid var(--paper-dark);
+  }
+  tbody td{ padding:14px 16px; font-size:13.5px; color:var(--ink-soft); border-bottom:1px solid var(--paper); vertical-align:top; }
+  tbody tr:last-child td{ border-bottom:none; }
+  .name-cell{ font-weight:600; color:var(--umber); }
+  .badge{ display:inline-block; padding:4px 10px; border-radius:999px; font-size:11px; font-weight:600; letter-spacing:.03em; }
+  .badge-yes{ background:rgba(107,155,90,.15); color:#4b7a3e; }
+  .badge-no{ background:rgba(180,75,62,.12); color:var(--danger); }
+  .msg-cell{ max-width:220px; font-style:italic; color:var(--umber-soft); }
+  .del-btn{
+    border:none; background:none; color:var(--umber-soft); cursor:pointer; font-size:12px;
+    text-decoration:underline; text-underline-offset:2px; padding:0;
+  }
+  .del-btn:hover{ color:var(--danger); }
+  .empty, .loading{ text-align:center; padding:48px 16px; color:var(--umber-soft); font-size:13.5px; }
+  .panel-note{ text-align:center; font-size:11.5px; color:var(--umber-soft); font-style:italic; margin:14px 0 0; }
+
+  /* ---------- LOCK SCREEN ---------- */
+  .lock-screen{
+    position:fixed; inset:0; z-index:500; display:flex; align-items:center; justify-content:center;
+    background:radial-gradient(circle at 50% 15%, #fffdf6 0%, var(--cream) 50%, var(--paper-dark) 110%);
+    padding:24px;
+  }
+  .lock-card{
+    width:min(360px,100%); background:var(--white); border:1px solid var(--gold-light); border-radius:16px;
+    padding:38px 30px; text-align:center; box-shadow:0 20px 50px rgba(37,26,17,.12);
+  }
+  .lock-card .eyebrow{ font-size:11px; letter-spacing:.28em; text-transform:uppercase; color:var(--gold); font-weight:600; }
+  .lock-card h2{ font-family:var(--font-script); font-size:30px; color:var(--umber); margin:8px 0 22px; font-weight:400; }
+  .lock-card input{
+    width:100%; padding:13px 14px; border-radius:8px; border:1px solid var(--gold-light);
+    background:var(--cream); font-family:var(--font-body); font-size:14.5px; color:var(--ink); outline:none;
+    text-align:center; letter-spacing:.1em;
+  }
+  .lock-card input:focus{ border-color:var(--gold); box-shadow:0 0 0 3px rgba(184,147,91,.18); }
+  .lock-card button{
+    width:100%; margin-top:14px; padding:14px; border:none; border-radius:999px; background:var(--umber); color:#fff;
+    font-size:12.5px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; cursor:pointer;
+  }
+  .lock-card button:hover{ background:#563318; }
+  .lock-error{ margin-top:12px; font-size:12px; color:var(--danger); display:none; }
+  .lock-error.is-shown{ display:block; }
+  body.locked-body{ overflow:hidden; }
+</style>
+</head>
+<body>
+
+<div class="lock-screen" id="lockScreen">
+  <div class="lock-card">
+    <span class="eyebrow">Жеке кабинет</span>
+    <h2>Кіру үшін құпия сөз</h2>
+    <form id="lockForm">
+      <input type="password" id="lockInput" placeholder="Құпия сөз" autocomplete="off" autofocus>
+      <button type="submit">Кіру</button>
+      <p class="lock-error" id="lockError">Құпия сөз қате. Қайталап көріңіз.</p>
+    </form>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="top">
+    <span class="eyebrow">Жеке кабинет</span>
+    <h1>Аймырза &amp; Аружан</h1>
+    <p>Қонақтардың жауаптарын осы жерден бақылай аласыздар</p>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-num" id="statTotal">—</div><div class="stat-label">Барлық жауаптар</div></div>
+    <div class="stat-card"><div class="stat-num" id="statYes">—</div><div class="stat-label">Келеді</div></div>
+    <div class="stat-card"><div class="stat-num" id="statNo">—</div><div class="stat-label">Келмейді</div></div>
+    <div class="stat-card"><div class="stat-num" id="statGuests">—</div><div class="stat-label">Жалпы қонақ саны</div></div>
+  </div>
+
+  <div class="actions">
+    <button class="btn" id="btnExport">Excel-ге жүктеу</button>
+    <button class="btn btn-danger" id="btnReset">Барлық жауаптарды тазалау</button>
+  </div>
+
+  <div class="panel">
+    <table id="responsesTable" style="display:none">
+      <thead>
+        <tr>
+          <th>Аты-жөні</th>
+          <th>Мәртебесі</th>
+          <th>Қонақ саны</th>
+          <th>Хабарлама</th>
+          <th>Жауап берген күні</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="responsesBody"></tbody>
+    </table>
+    <p class="loading" id="loadingState">Жүктелуде...</p>
+    <p class="empty" id="emptyState" style="display:none">Әзірге жауаптар жоқ.</p>
+  </div>
+  <p class="panel-note">Бұл бет тек сілтемені білетіндерге арналған — қонақтарға таратпаңыз</p>
+</div>
+
+<script>
+(function(){
+  /* ---------- PASSWORD GATE ----------
+     Бұл клиент жағындағы қорғаныс — қонақтардың байқаусызда кіруінен сақтайды,
+     бірақ шынайы қауіпсіздік емес (сайттың коды кез келгенге көрінеді).
+     Құпия сөзді осы жерден өзгертіңіз: */
+  var CABINET_PASSWORD = '3010';
+  var SESSION_KEY = 'wedding_cabinet_unlocked';
+
+  var lockScreen = document.getElementById('lockScreen');
+  var lockForm = document.getElementById('lockForm');
+  var lockInput = document.getElementById('lockInput');
+  var lockError = document.getElementById('lockError');
+
+  function unlock(){
+    lockScreen.style.display = 'none';
+    document.body.classList.remove('locked-body');
+    try{ sessionStorage.setItem(SESSION_KEY, '1'); }catch(e){}
+    loadData();
+  }
+
+  var alreadyUnlocked = false;
+  try{ alreadyUnlocked = sessionStorage.getItem(SESSION_KEY) === '1'; }catch(e){}
+
+  if(alreadyUnlocked){
+    lockScreen.style.display = 'none';
+  } else {
+    document.body.classList.add('locked-body');
+    lockForm.addEventListener('submit', function(e){
+      e.preventDefault();
+      if(lockInput.value === CABINET_PASSWORD){
+        unlock();
+      } else {
+        lockError.classList.add('is-shown');
+        lockInput.value = '';
+        lockInput.focus();
+      }
+    });
+  }
+
+  var storage = window.storage || {
+    set: function(key, value){ try{ localStorage.setItem(key, value); return true; }catch(e){ return false; } },
+    get: function(key){
+      try{ var v = localStorage.getItem(key); return v === null ? null : { value: v }; }catch(e){ return null; }
+    },
+    list: function(prefix){
+      try{
+        var keys = [];
+        for(var i=0;i<localStorage.length;i++){
+          var k = localStorage.key(i);
+          if(k && k.indexOf(prefix) === 0) keys.push(k);
+        }
+        return { keys: keys };
+      }catch(e){ return { keys: [] }; }
+    },
+    delete: function(key){
+      try{ localStorage.removeItem(key); return { deleted:true }; }catch(e){ return null; }
+    }
+  };
+
+  function storageList(prefix){ return Promise.resolve(storage.list ? storage.list(prefix, true) : storage.list(prefix)); }
+  function storageGet(key){ return Promise.resolve(storage.get ? storage.get(key, true) : storage.get(key)); }
+  function storageDelete(key){ return Promise.resolve(storage.delete ? storage.delete(key, true) : storage.delete(key)); }
+
+  var responsesBody = document.getElementById('responsesBody');
+  var responsesTable = document.getElementById('responsesTable');
+  var loadingState = document.getElementById('loadingState');
+  var emptyState = document.getElementById('emptyState');
+  var btnExport = document.getElementById('btnExport');
+  var btnReset = document.getElementById('btnReset');
+
+  var currentItems = [];
+
+  function escapeHtml(str){
+    return String(str).replace(/[&<>"']/g, function(c){
+      return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+    });
+  }
+
+  function formatDate(value){
+    if(!value) return '';
+    try{ return new Date(value).toLocaleString('kk-KZ', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }); }
+    catch(e){ return value; }
+  }
+
+  async function loadData(){
+    loadingState.style.display = 'block';
+    emptyState.style.display = 'none';
+    responsesTable.style.display = 'none';
+    try{
+      var listRes = await storageList('rsvp_');
+      var keys = (listRes && listRes.keys) ? listRes.keys : [];
+      var items = [];
+      for(var i=0;i<keys.length;i++){
+        try{
+          var itemRes = await storageGet(keys[i]);
+          if(itemRes && itemRes.value){
+            var parsed = JSON.parse(itemRes.value);
+            if(parsed && parsed.name){ parsed._key = keys[i]; items.push(parsed); }
+          }
+        }catch(e){ /* skip broken item */ }
+      }
+      items.sort(function(a,b){ return new Date(b.ts || b.updatedAt || 0) - new Date(a.ts || a.updatedAt || 0); });
+      currentItems = items;
+      render(items);
+    }catch(err){
+      loadingState.textContent = 'Жауаптарды жүктеу мүмкін болмады.';
+    }
+  }
+
+  function render(items){
+    loadingState.style.display = 'none';
+
+    var yes = items.filter(function(it){ return it.attending === 'yes'; });
+    var no = items.filter(function(it){ return it.attending !== 'yes'; });
+    var totalGuests = yes.reduce(function(sum, it){ return sum + (parseInt(it.guests, 10) || 1); }, 0);
+
+    document.getElementById('statTotal').textContent = items.length;
+    document.getElementById('statYes').textContent = yes.length;
+    document.getElementById('statNo').textContent = no.length;
+    document.getElementById('statGuests').textContent = totalGuests;
+
+    if(!items.length){
+      emptyState.style.display = 'block';
+      return;
+    }
+
+    responsesTable.style.display = '';
+    responsesBody.innerHTML = items.map(function(it){
+      var isYes = it.attending === 'yes';
+      var badge = isYes ? '<span class="badge badge-yes">Келеді ✓</span>' : '<span class="badge badge-no">Келмейді</span>';
+      var guests = isYes ? (parseInt(it.guests, 10) || 1) : '—';
+      var msg = it.message ? escapeHtml(it.message) : '—';
+      return '<tr>' +
+        '<td class="name-cell">' + escapeHtml(it.name || 'Аты жоқ') + '</td>' +
+        '<td>' + badge + '</td>' +
+        '<td>' + guests + '</td>' +
+        '<td class="msg-cell">' + msg + '</td>' +
+        '<td>' + escapeHtml(formatDate(it.ts || it.updatedAt)) + '</td>' +
+        '<td><button class="del-btn" data-key="' + escapeHtml(it._key) + '">Жою</button></td>' +
+        '</tr>';
+    }).join('');
+
+    responsesBody.querySelectorAll('.del-btn').forEach(function(btn){
+      btn.addEventListener('click', async function(){
+        var key = btn.getAttribute('data-key');
+        if(!confirm('Осы қонақтың жауабын жоюды растайсыз ба?')) return;
+        btn.disabled = true;
+        await storageDelete(key);
+        broadcastUpdate();
+        loadData();
+      });
+    });
+  }
+
+  btnExport.addEventListener('click', function(){
+    if(!currentItems.length){ alert('Жүктеу үшін жауаптар жоқ.'); return; }
+    var rows = [['Аты-жөні', 'Мәртебесі', 'Қонақ саны', 'Хабарлама', 'Жауап берген күні']];
+    currentItems.forEach(function(it){
+      var isYes = it.attending === 'yes';
+      rows.push([
+        it.name || '',
+        isYes ? 'Келеді' : 'Келмейді',
+        isYes ? (parseInt(it.guests, 10) || 1) : 0,
+        it.message || '',
+        formatDate(it.ts || it.updatedAt)
+      ]);
+    });
+    var ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [{ wch:24 }, { wch:14 }, { wch:12 }, { wch:40 }, { wch:20 }];
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Жауаптар');
+    XLSX.writeFile(wb, 'RSVP_жауаптар.xlsx');
+  });
+
+  btnReset.addEventListener('click', async function(){
+    if(!currentItems.length){ alert('Тазалайтын жауап жоқ.'); return; }
+    if(!confirm('Барлық ' + currentItems.length + ' жауапты жоюды растайсыз ба? Бұл әрекетті болдырмауға болмайды.')) return;
+    if(!confirm('Соңғы рет сұраймыз: шынымен барлығын жоямыз ба?')) return;
+    btnReset.disabled = true;
+    try{
+      for(var i=0;i<currentItems.length;i++){
+        await storageDelete(currentItems[i]._key);
+      }
+      broadcastUpdate();
+      await loadData();
+    } finally {
+      btnReset.disabled = false;
+    }
+  });
+
+  var rsvpChannel = null;
+  if(window.BroadcastChannel){
+    rsvpChannel = new BroadcastChannel('wedding-rsvp-channel');
+    rsvpChannel.onmessage = function(event){
+      if(event.data && event.data.type === 'rsvp-update'){ loadData(); }
+    };
+  }
+  window.addEventListener('storage', function(event){
+    if(event.key && event.key.indexOf('rsvp_') === 0){ loadData(); }
+  });
+  function broadcastUpdate(){
+    if(rsvpChannel){ rsvpChannel.postMessage({ type:'rsvp-update' }); }
+  }
+
+  if(alreadyUnlocked){ loadData(); }
+})();
+</script>
+</body>
+</html>
