@@ -1,0 +1,9 @@
+{
+  "name": "aimyrza-aruzhan-invite",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "deploy:vercel": "vercel --prod",
+    "deploy:netlify": "netlify deploy --prod --dir=."
+  }
+}
