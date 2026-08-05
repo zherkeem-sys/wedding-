@@ -1,9 +1,12 @@
 {
   "version": 2,
   "builds": [
-    { "src": "template.html", "use": "@vercel/static" }
+    { "src": "index.html", "use": "@vercel/static" },
+    { "src": "кабинет.html", "use": "@vercel/static" }
   ],
   "routes": [
-    { "src": "/", "dest": "/template.html" }
+    { "src": "/", "dest": "/index.html" },
+    { "src": "/кабинет", "dest": "/кабинет.html" },
+    { "src": "/кабинет.html", "dest": "/кабинет.html" }
   ]
 }
