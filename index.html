@@ -1,4 +1,4 @@
-  <!DOCTYPE html>
+<!DOCTYPE html>
   <html lang="kk">
   <head>
   <meta charset="UTF-8">
@@ -826,6 +826,23 @@
       return Promise.resolve(storage.list ? storage.list(prefix, true) : storage.list(prefix));
     }
 
+    var GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyiH5Md1ORTPnGzyfexuhFSZS7U3VOuJAo-GGZRMxCd8QAdFom5LEtg3trATiTLy_sG/exec';
+
+    function submitRsvpToSheet(payload){
+      return fetch(GOOGLE_SCRIPT_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+        },
+        body: new URLSearchParams(payload).toString()
+      }).then(function(response){
+        if(!response.ok){
+          throw new Error('Google Script response not OK: ' + response.status);
+        }
+        return response.text();
+      });
+    }
+
     function syncGuestsField(){
       var checked = rsvpForm.querySelector('input[name="attending"]:checked');
       guestsField.style.display = (checked && checked.value === 'no') ? 'none' : 'block';
@@ -918,15 +935,25 @@
       rsvpSubmit.disabled = true;
       rsvpSubmit.textContent = 'Жіберілуде...';
       var name = rsvpForm.name.value.trim();
+      var attending = rsvpForm.attending.value;
+      var guests = attending === 'no' ? '0' : rsvpForm.guests.value;
       var data = {
         name: name,
-        attending: rsvpForm.attending.value,
-        guests: rsvpForm.guests.value,
+        attending: attending,
+        guests: guests,
         message: rsvpForm.message.value.trim(),
         ts: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
       try{
+        await submitRsvpToSheet({
+          name: data.name,
+          status: data.attending === 'yes' ? 'Придут' : 'Не придут',
+          guests: data.guests,
+          comment: data.message,
+          timestamp: data.ts
+        });
+
         var existingKey = await findExistingKey(name);
         var key = existingKey || ('rsvp_' + slugify(name));
         var res = await storageSet(key, JSON.stringify(data));
