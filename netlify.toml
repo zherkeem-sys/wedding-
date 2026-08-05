@@ -3,6 +3,11 @@
   command = ""
 
 [[redirects]]
-  from = "/*"
-  to = "/template.html"
+  from = "/"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/кабинет"
+  to = "/кабинет.html"
   status = 200
