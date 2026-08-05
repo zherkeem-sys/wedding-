@@ -213,6 +213,21 @@
   function storageGet(key){ return Promise.resolve(storage.get ? storage.get(key, true) : storage.get(key)); }
   function storageDelete(key){ return Promise.resolve(storage.delete ? storage.delete(key, true) : storage.delete(key)); }
 
+  var GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyiH5Md1ORTPnGzyfexuhFSZS7U3VOuJAo-GGZRMxCd8QAdFom5LEtg3trATiTLy_sG/exec';
+
+  function fetchSheetResponses(){
+    return fetch(GOOGLE_SCRIPT_URL + '?mode=read', { method: 'GET', cache: 'no-store' })
+      .then(function(response){
+        if(!response.ok){ throw new Error('Google Script response not OK: ' + response.status); }
+        return response.text();
+      })
+      .then(function(text){
+        try{ return JSON.parse(text); } catch(e){
+          throw new Error('Google Script did not return valid JSON');
+        }
+      });
+  }
+
   var responsesBody = document.getElementById('responsesBody');
   var responsesTable = document.getElementById('responsesTable');
   var loadingState = document.getElementById('loadingState');
@@ -239,18 +254,37 @@
     emptyState.style.display = 'none';
     responsesTable.style.display = 'none';
     try{
-      var listRes = await storageList('rsvp_');
-      var keys = (listRes && listRes.keys) ? listRes.keys : [];
       var items = [];
-      for(var i=0;i<keys.length;i++){
-        try{
-          var itemRes = await storageGet(keys[i]);
-          if(itemRes && itemRes.value){
-            var parsed = JSON.parse(itemRes.value);
-            if(parsed && parsed.name){ parsed._key = keys[i]; items.push(parsed); }
-          }
-        }catch(e){ /* skip broken item */ }
+      try{
+        var sheetData = await fetchSheetResponses();
+        if(Array.isArray(sheetData)){
+          sheetData.forEach(function(row){
+            if(row && row.name){
+              items.push({
+                name: row.name,
+                attending: row.status === 'Придут' ? 'yes' : 'no',
+                guests: row.guests != null ? String(row.guests) : '0',
+                message: row.comment || '',
+                ts: row.timestamp || ''
+              });
+            }
+          });
+        }
+      } catch(fetchErr){
+        console.warn('Google Sheet fetch failed, falling back to localStorage', fetchErr);
+        var listRes = await storageList('rsvp_');
+        var keys = (listRes && listRes.keys) ? listRes.keys : [];
+        for(var i=0;i<keys.length;i++){
+          try{
+            var itemRes = await storageGet(keys[i]);
+            if(itemRes && itemRes.value){
+              var parsed = JSON.parse(itemRes.value);
+              if(parsed && parsed.name){ parsed._key = keys[i]; items.push(parsed); }
+            }
+          }catch(e){ /* skip broken item */ }
+        }
       }
+
       items.sort(function(a,b){ return new Date(b.ts || b.updatedAt || 0) - new Date(a.ts || a.updatedAt || 0); });
       currentItems = items;
       render(items);
